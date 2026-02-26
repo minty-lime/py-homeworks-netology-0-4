@@ -2,11 +2,14 @@
 Задание 3 (необязательное).
 Итератор FlatIterator для обработки списков с любым уровнем вложенности.
 """
+from collections.abc import Iterable
 
 
 class FlatIterator:
     """
-    Итератор для преобразования вложенных списков любого уровня в плоскую последовательность.
+    Итератор для преобразования вложенных итерируемых объектов любого уровня
+    в плоскую последовательность.
+    Поддерживает list, tuple, set и другие Iterable (кроме строк и байтов).
     """
 
     def __init__(self, list_of_list):
@@ -19,20 +22,15 @@ class FlatIterator:
     def __next__(self):
         while self.stack:
             try:
-                # Пытаемся получить следующий элемент из текущего итератора
                 item = next(self.stack[-1])
-                
-                # Если элемент - список, добавляем его итератор в стек
-                if isinstance(item, list):
+
+                if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
                     self.stack.append(iter(item))
                 else:
-                    # Если не список, возвращаем элемент
                     return item
             except StopIteration:
-                # Если текущий итератор исчерпан, удаляем его из стека
                 self.stack.pop()
-        
-        # Если стек пуст, все элементы пройдены
+
         raise StopIteration
 
 
@@ -47,13 +45,32 @@ def test_3():
     ]
 
     for flat_iterator_item, check_item in zip(
-            FlatIterator(list_of_lists_2),
-            ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None, '!']
+        FlatIterator(list_of_lists_2),
+        ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None, '!']
     ):
         assert flat_iterator_item == check_item
 
     assert list(FlatIterator(list_of_lists_2)) == ['a', 'b', 'c', 'd', 'e', 'f', 'h', False, 1, 2, None, '!']
-    
+
+    # Проверка работы с кортежами, множествами и смешанными структурами
+    mixed_data = [
+        ('a', 'b'),
+        [('c',), ['d', 'e']],
+        (1, [2, (3,)]),
+    ]
+
+    assert list(FlatIterator(mixed_data)) == ['a', 'b', 'c', 'd', 'e', 1, 2, 3]
+
+    # set не гарантирует порядок, поэтому проверяем через множество
+    data_with_set = [
+        [1, 2],
+        {3, 4},
+        [5],
+    ]
+    result = list(FlatIterator(data_with_set))
+    assert set(result) == {1, 2, 3, 4, 5}
+    assert len(result) == 5
+
     print("Тест 3 пройден успешно!")
 
 
